@@ -176,15 +176,19 @@ std::optional<std::pair<size_t, TrajectoryPoint>> getBackwardInsertPointFromBase
 }
 
 std::optional<std::pair<size_t, double>> findNearestFrontIndex(
-  const size_t start_idx, const TrajectoryPoints & trajectory, const Point & point)
+  const size_t start_idx, const TrajectoryPoints & trajectory, const Point & point, const bool is_driving_forward)
 {
   for (size_t i = start_idx; i < trajectory.size(); ++i) {
     const auto & p_traj = trajectory.at(i).pose;
     const auto yaw = getRPY(p_traj).z;
-    const Point2d p_traj_direction(std::cos(yaw), std::sin(yaw));
-    const Point2d p_traj_to_target(point.x - p_traj.position.x, point.y - p_traj.position.y);
+    const double cos_yaw = std::cos(yaw);
+    const double sin_yaw = std::sin(yaw);
 
-    const auto is_in_front_of_target_point = p_traj_direction.dot(p_traj_to_target) < 0.0;
+    const Point2d p_traj_direction = is_driving_forward ?
+                                                        Point2d(cos_yaw, sin_yaw):
+                                                        Point2d(-cos_yaw, -sin_yaw);
+    const Point2d p_traj_to_target(point.x - p_traj.position.x, point.y - p_traj.position.y);
+    const auto is_in_front_of_target_point = p_traj_to_target.dot(p_traj_direction) > 0.0;
     const auto is_trajectory_end = i + 1 == trajectory.size();
 
     if (is_in_front_of_target_point || is_trajectory_end) {

@@ -41,8 +41,8 @@ using tier4_autoware_utils::createPoint;
 namespace motion_planning
 {
 ObstacleStopPlannerDebugNode::ObstacleStopPlannerDebugNode(
-  rclcpp::Node * node, const double base_link2front)
-: node_(node), base_link2front_(base_link2front)
+  rclcpp::Node * node, const double ego_offset)
+: node_(node), ego_offset_(ego_offset)
 {
   virtual_wall_pub_ = node_->create_publisher<MarkerArray>("~/virtual_wall", 1);
   debug_viz_pub_ = node_->create_publisher<MarkerArray>("~/debug/marker", 1);
@@ -222,7 +222,7 @@ MarkerArray ObstacleStopPlannerDebugNode::makeVirtualWallMarker()
   rclcpp::Time current_time = node_->now();
 
   if (stop_pose_ptr_ != nullptr) {
-    const auto p = calcOffsetPose(*stop_pose_ptr_, base_link2front_, 0.0, 0.0);
+    const auto p = calcOffsetPose(*stop_pose_ptr_, ego_offset_, 0.0, 0.0);
     const auto markers = createStopVirtualWallMarker(p, "obstacle on the path", current_time, 0);
     appendMarkerArray(markers, &msg);
   } else {
@@ -231,7 +231,7 @@ MarkerArray ObstacleStopPlannerDebugNode::makeVirtualWallMarker()
   }
 
   if (slow_down_start_pose_ptr_ != nullptr && stop_pose_ptr_ == nullptr) {
-    const auto p = calcOffsetPose(*slow_down_start_pose_ptr_, base_link2front_, 0.0, 0.0);
+    const auto p = calcOffsetPose(*slow_down_start_pose_ptr_, ego_offset_, 0.0, 0.0);
 
     {
       const auto markers =
@@ -251,7 +251,7 @@ MarkerArray ObstacleStopPlannerDebugNode::makeVirtualWallMarker()
   }
 
   if (slow_down_end_pose_ptr_ != nullptr && stop_pose_ptr_ == nullptr) {
-    const auto p = calcOffsetPose(*slow_down_end_pose_ptr_, base_link2front_, 0.0, 0.0);
+    const auto p = calcOffsetPose(*slow_down_end_pose_ptr_, ego_offset_, 0.0, 0.0);
     auto markers = createSlowDownVirtualWallMarker(p, "slow down\nend", current_time, 2);
     markers.markers.front().ns = "slow_down_end_virtual_wall";
     markers.markers.back().ns = "slow_down_end_factor_text";
@@ -448,7 +448,7 @@ MarkerArray ObstacleStopPlannerDebugNode::makeVisualizationMarker()
   }
 
   if (target_stop_pose_ptr_ != nullptr) {
-    const auto p = calcOffsetPose(*target_stop_pose_ptr_, base_link2front_, 0.0, 0.0);
+    const auto p = calcOffsetPose(*target_stop_pose_ptr_, ego_offset_, 0.0, 0.0);
     const auto markers =
       createStopVirtualWallMarker(p, "obstacle_stop_target_stop_line", current_time, 0);
     appendMarkerArray(markers, &msg);
