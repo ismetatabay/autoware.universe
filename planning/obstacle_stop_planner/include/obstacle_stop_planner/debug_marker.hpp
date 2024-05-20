@@ -126,6 +126,7 @@ public:
   {
     debug_values_.setValues(type, val);
   }
+  void setEgoOffset(const double val) { ego_offset_ = val; }
   void publish();
 
 private:
@@ -135,7 +136,7 @@ private:
   rclcpp::Publisher<VelocityFactorArray>::SharedPtr velocity_factor_pub_;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr pub_debug_values_;
   rclcpp::Node * node_;
-  double base_link2front_;
+  double ego_offset_;
 
   std::shared_ptr<Pose> stop_pose_ptr_;
   std::shared_ptr<Pose> target_stop_pose_ptr_;

@@ -324,16 +324,12 @@ void ObstacleStopPlannerNode::onTrigger(const Trajectory::ConstSharedPtr input_m
   const auto current_vel = current_odometry_ptr->twist.twist.linear.x;
   const auto current_acc = current_acceleration_ptr->accel.accel.linear.x;
 
-  // TODO(someone): support backward path
   const auto is_driving_forward = motion_utils::isDrivingForwardWithTwist(input_msg->points);
   is_driving_forward_ = is_driving_forward ? is_driving_forward.value() : is_driving_forward_;
-  if (!is_driving_forward_) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 3000, "Backward path is NOT supported. publish input as it is.");
-    pub_trajectory_->publish(*input_msg);
-    published_time_publisher_->publish_if_subscribed(pub_trajectory_, input_msg->header.stamp);
-    return;
-  }
+
+  is_driving_forward_
+    ? debug_ptr_->setEgoOffset(vehicle_info.max_longitudinal_offset_m)
+    : debug_ptr_->setEgoOffset(vehicle_info.min_longitudinal_offset_m);
 
   PlannerData planner_data{};
 
@@ -990,7 +986,9 @@ void ObstacleStopPlannerNode::insertVelocity(
   [[maybe_unused]] const Header & trajectory_header, const VehicleInfo & vehicle_info,
   const double current_acc, const double current_vel, const StopParam & stop_param)
 {
-  const auto & base_link2front = vehicle_info.max_longitudinal_offset_m;
+  const auto & abs_ego_offset = is_driving_forward_
+                                  ? std::abs(vehicle_info.max_longitudinal_offset_m)
+                                  : std::abs(vehicle_info.min_longitudinal_offset_m);
 
   if (planner_data.stop_require) {
     // insert stop point
@@ -1004,7 +1002,6 @@ void ObstacleStopPlannerNode::insertVelocity(
       std::min(idx, traj_end_idx), output,
       createPoint(
         planner_data.nearest_collision_point.x, planner_data.nearest_collision_point.y, 0));
-
     if (index_with_dist_remain) {
       const auto vehicle_idx = std::min(planner_data.trajectory_trim_index, traj_end_idx);
       const auto dist_baselink_to_obstacle =
@@ -1012,7 +1009,7 @@ void ObstacleStopPlannerNode::insertVelocity(
 
       debug_ptr_->setDebugValues(
         DebugValues::TYPE::COLLISION_OBSTACLE_DISTANCE,
-        dist_baselink_to_obstacle + index_with_dist_remain.value().second - base_link2front);
+        dist_baselink_to_obstacle + index_with_dist_remain.value().second - abs_ego_offset);
 
       const auto stop_point = searchInsertPoint(
         index_with_dist_remain.value().first, output, index_with_dist_remain.value().second,
@@ -1093,7 +1090,7 @@ void ObstacleStopPlannerNode::insertVelocity(
 
       debug_ptr_->setDebugValues(
         DebugValues::TYPE::SLOWDOWN_OBSTACLE_DISTANCE,
-        dist_baselink_to_obstacle + index_with_dist_remain.value().second - base_link2front);
+        dist_baselink_to_obstacle + index_with_dist_remain.value().second - abs_ego_offset);
       const auto slow_down_section = createSlowDownSection(
         index_with_dist_remain.value().first, output, planner_data.lateral_deviation,
         index_with_dist_remain.value().second, dist_baselink_to_obstacle, vehicle_info, current_acc,

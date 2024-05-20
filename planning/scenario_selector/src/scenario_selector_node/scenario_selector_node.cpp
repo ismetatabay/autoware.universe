@@ -316,17 +316,12 @@ void ScenarioSelectorNode::onParkingTrajectory(
 void ScenarioSelectorNode::publishTrajectory(
   const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
-  const auto now = this->now();
-  const auto delay_sec = (now - msg->header.stamp).seconds();
-  if (delay_sec <= th_max_message_delay_sec_) {
-    pub_trajectory_->publish(*msg);
-    published_time_publisher_->publish_if_subscribed(pub_trajectory_, msg->header.stamp);
-  } else {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), std::chrono::milliseconds(1000).count(),
-      "trajectory is delayed: scenario = %s, delay = %f, th_max_message_delay = %f",
-      current_scenario_.c_str(), delay_sec, th_max_message_delay_sec_);
-  }
+  autoware_auto_planning_msgs::msg::Trajectory traj;
+  traj.header.stamp = now();
+  traj.header.frame_id = msg->header.frame_id;
+  traj.points = msg->points;
+  pub_trajectory_->publish(traj);
+  published_time_publisher_->publish_if_subscribed(pub_trajectory_, traj.header.stamp);
 }
 
 ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_options)

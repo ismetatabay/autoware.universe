@@ -181,9 +181,14 @@ std::optional<std::pair<size_t, double>> findNearestFrontIndex(
   for (size_t i = start_idx; i < trajectory.size(); ++i) {
     const auto & p_traj = trajectory.at(i).pose;
     const auto yaw = getRPY(p_traj).z;
-    const Point2d p_traj_direction(std::cos(yaw), std::sin(yaw));
-    const Point2d p_traj_to_target(point.x - p_traj.position.x, point.y - p_traj.position.y);
+    const double cos_yaw = std::cos(yaw);
+    const double sin_yaw = std::sin(yaw);
 
+    const auto is_driving_forward = motion_utils::isDrivingForwardWithTwist(trajectory);
+    const Point2d p_traj_direction = is_driving_forward.value() ?
+                                                                Point2d(cos_yaw, sin_yaw) :
+                                                                Point2d(-cos_yaw, -sin_yaw);
+    const Point2d p_traj_to_target(point.x - p_traj.position.x, point.y - p_traj.position.y);
     const auto is_in_front_of_target_point = p_traj_direction.dot(p_traj_to_target) < 0.0;
     const auto is_trajectory_end = i + 1 == trajectory.size();
 
