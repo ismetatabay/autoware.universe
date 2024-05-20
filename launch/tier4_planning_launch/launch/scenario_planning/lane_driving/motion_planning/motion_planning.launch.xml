@@ -121,11 +121,11 @@
       <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
         <composable_node pkg="obstacle_cruise_planner" plugin="motion_planning::ObstacleCruisePlannerNode" name="obstacle_cruise_planner" namespace="">
           <!-- topic remap -->
-          <remap from="~/input/trajectory" to="obstacle_velocity_limiter/trajectory"/>
+          <remap from="~/input/trajectory" to="/planning/scenario_planning/lane_driving/trajectory"/>
           <remap from="~/input/odometry" to="/localization/kinematic_state"/>
           <remap from="~/input/acceleration" to="/localization/acceleration"/>
           <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-          <remap from="~/output/trajectory" to="$(var interface_output_topic)"/>
+          <remap from="~/output/trajectory" to="/planning/scenario_planning/scenario_selector/trajectory"/>
           <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
           <remap from="~/output/velocity_limit" to="/planning/scenario_planning/max_velocity_candidates"/>
           <remap from="~/output/clear_velocity_limit" to="/planning/scenario_planning/clear_velocity_limit"/>
@@ -144,12 +144,12 @@
       <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
         <composable_node pkg="obstacle_stop_planner" plugin="motion_planning::ObstacleStopPlannerNode" name="obstacle_stop_planner" namespace="">
           <!-- topic remap -->
-          <remap from="~/input/trajectory" to="obstacle_velocity_limiter/trajectory"/>
+          <remap from="~/input/trajectory" to="/planning/scenario_planning/lane_driving/trajectory"/>
           <remap from="~/input/odometry" to="/localization/kinematic_state"/>
           <remap from="~/input/acceleration" to="/localization/acceleration"/>
           <remap from="~/input/pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
           <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-          <remap from="~/output/trajectory" to="$(var interface_output_topic)"/>
+          <remap from="~/output/trajectory" to="/planning/scenario_planning/scenario_selector/trajectory"/>
           <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
           <remap from="~/output/max_velocity" to="/planning/scenario_planning/max_velocity_candidates"/>
           <remap from="~/output/velocity_limit_clear_command" to="/planning/scenario_planning/clear_velocity_limit"/>
