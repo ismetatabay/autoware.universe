@@ -129,6 +129,14 @@ ScenarioSelectorNode::getScenarioTrajectory(const std::string & scenario)
   if (scenario == tier4_planning_msgs::msg::Scenario::PARKING) {
     return parking_trajectory_;
   }
+  if (scenario == tier4_planning_msgs::msg::Scenario::DEFINED) {
+    if (defined_trajectory_) {
+      return defined_trajectory_;
+    } else {
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Defined trajectory is not arrived yet!");
+      return lane_driving_trajectory_;
+    }
+  }
   RCLCPP_ERROR_STREAM(this->get_logger(), "invalid scenario argument: " << scenario);
   return lane_driving_trajectory_;
 }
@@ -138,6 +146,10 @@ std::string ScenarioSelectorNode::selectScenarioByPosition()
   const auto is_in_lane = isInLane(lanelet_map_ptr_, current_pose_->pose.pose.position);
   const auto is_goal_in_lane = isInLane(lanelet_map_ptr_, route_->goal_pose.position);
   const auto is_in_parking_lot = isInParkingLot(lanelet_map_ptr_, current_pose_->pose.pose);
+
+  if (is_defined_traj_requested_) {
+    return tier4_planning_msgs::msg::Scenario::DEFINED;
+  }
 
   if (current_scenario_ == tier4_planning_msgs::msg::Scenario::EMPTY) {
     if (is_in_lane && is_goal_in_lane) {
@@ -234,6 +246,12 @@ void ScenarioSelectorNode::onParkingState(const std_msgs::msg::Bool::ConstShared
   is_parking_completed_ = msg->data;
 }
 
+void ScenarioSelectorNode::onDefinedTrajRequest(const std_msgs::msg::Bool::ConstSharedPtr msg)
+{
+  is_defined_traj_requested_ = msg->data;
+}
+
+
 bool ScenarioSelectorNode::isDataReady()
 {
   if (!current_pose_) {
@@ -313,6 +331,18 @@ void ScenarioSelectorNode::onParkingTrajectory(
   publishTrajectory(msg);
 }
 
+void ScenarioSelectorNode::onDefinedTrajectory(
+  const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
+{
+  defined_trajectory_ = msg;
+
+  if (current_scenario_ != tier4_planning_msgs::msg::Scenario::DEFINED) {
+    return;
+  }
+
+  publishTrajectory(msg);
+}
+
 void ScenarioSelectorNode::publishTrajectory(
   const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
@@ -349,6 +379,10 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
     "input/parking/trajectory", rclcpp::QoS{1},
     std::bind(&ScenarioSelectorNode::onParkingTrajectory, this, std::placeholders::_1));
 
+  sub_defined_trajectory_ = this->create_subscription<autoware_auto_planning_msgs::msg::Trajectory>(
+    "input/defined/trajectory", rclcpp::QoS{1},
+    std::bind(&ScenarioSelectorNode::onDefinedTrajectory, this, std::placeholders::_1));
+
   sub_lanelet_map_ = this->create_subscription<autoware_auto_mapping_msgs::msg::HADMapBin>(
     "input/lanelet_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&ScenarioSelectorNode::onMap, this, std::placeholders::_1));
@@ -361,6 +395,9 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
   sub_parking_state_ = this->create_subscription<std_msgs::msg::Bool>(
     "is_parking_completed", rclcpp::QoS{100},
     std::bind(&ScenarioSelectorNode::onParkingState, this, std::placeholders::_1));
+  sub_defined_traj_request_ = this->create_subscription<std_msgs::msg::Bool>(
+    "is_defined_trajectory_requested", rclcpp::QoS{100},
+    std::bind(&ScenarioSelectorNode::onDefinedTrajRequest, this, std::placeholders::_1));
 
   // Output
   pub_scenario_ =

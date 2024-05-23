@@ -52,12 +52,14 @@ public:
   void onRoute(const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg);
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
   void onParkingState(const std_msgs::msg::Bool::ConstSharedPtr msg);
+  void onDefinedTrajRequest(const std_msgs::msg::Bool::ConstSharedPtr msg);
 
   bool isDataReady();
   void onTimer();
   void onLaneDrivingTrajectory(
     const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void onParkingTrajectory(const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
+  void onDefinedTrajectory(const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void publishTrajectory(const autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
 
   void updateCurrentScenario();
@@ -75,12 +77,16 @@ private:
     sub_lane_driving_trajectory_;
   rclcpp::Subscription<autoware_auto_planning_msgs::msg::Trajectory>::SharedPtr
     sub_parking_trajectory_;
+  rclcpp::Subscription<autoware_auto_planning_msgs::msg::Trajectory>::SharedPtr
+    sub_defined_trajectory_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_defined_traj_request_;
   rclcpp::Publisher<autoware_auto_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
   rclcpp::Publisher<tier4_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
 
   autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr lane_driving_trajectory_;
   autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr parking_trajectory_;
+  autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr defined_trajectory_;
   autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route_;
   nav_msgs::msg::Odometry::ConstSharedPtr current_pose_;
   geometry_msgs::msg::TwistStamped::ConstSharedPtr twist_;
@@ -101,6 +107,7 @@ private:
   double th_stopped_time_sec_;
   double th_stopped_velocity_mps_;
   bool is_parking_completed_;
+  bool is_defined_traj_requested_{false};
 };
 
 #endif  // SCENARIO_SELECTOR__SCENARIO_SELECTOR_NODE_HPP_
