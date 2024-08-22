@@ -33,6 +33,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <tier4_debug_msgs/msg/float32_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -83,6 +84,7 @@ struct ObjectData
   double velocity{0.0};
   double rss{0.0};
   double distance_to_object{0.0};
+  bool is_target{true};
 };
 
 /**
@@ -338,6 +340,8 @@ public:
   rclcpp::Publisher<MarkerArray>::SharedPtr info_marker_publisher_;
   rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr debug_rss_distance_publisher_;
+
   // timer
   rclcpp::TimerBase::SharedPtr timer_;
   mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_{nullptr};
@@ -422,12 +426,14 @@ public:
    * @brief Create object data using point cloud clusters
    * @param ego_path Ego vehicle path
    * @param ego_polys Polygons representing the ego vehicle footprint
+   * @param expanded_ego_polys Polygons representing the expanded ego vehicle footprint with margin
    * @param stamp Timestamp of the data
    * @param objects Vector to store the created object data
    * @param obstacle_points_ptr Pointer to the point cloud of obstacles
    */
   void createObjectDataUsingPointCloudClusters(
-    const Path & ego_path, const std::vector<Polygon2d> & ego_polys, const rclcpp::Time & stamp,
+    const Path & ego_path, const std::vector<Polygon2d> & ego_polys,
+    const std::vector<Polygon2d> & expanded_ego_polys, const rclcpp::Time & stamp,
     std::vector<ObjectData> & objects,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_points_ptr);
 
@@ -465,9 +471,10 @@ public:
    */
   void addMarker(
     const rclcpp::Time & current_time, const Path & path, const std::vector<Polygon2d> & polygons,
-    const std::vector<ObjectData> & objects, const std::optional<ObjectData> & closest_object,
-    const double color_r, const double color_g, const double color_b, const double color_a,
-    const std::string & ns, MarkerArray & debug_markers);
+    const std::vector<Polygon2d> & search_area_polygons, const std::vector<ObjectData> & objects,
+    const std::optional<ObjectData> & closest_object, const double color_r, const double color_g,
+    const double color_b, const double color_a, const std::string & ns,
+    MarkerArray & debug_markers);
 
   /**
    * @brief Add a collision marker for debugging
