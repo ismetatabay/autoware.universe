@@ -846,19 +846,18 @@ void AEB::createObjectDataUsingPointCloudClusters(
     obj.distance_to_object = std::abs(dist_ego_to_object);
 
     const Point2d obj_point(p.x, p.y);
+    // Check if the object is in the predicted path for AEB or not
+    if (!std::any_of(ego_polys.begin(), ego_polys.end(), [&obj_point](const auto & ego_poly) {
+          return bg::within(obj_point, ego_poly);
+        })) {
+      obj.is_target = false;
+    }
     // Add all objects located in the expanded area to the object list for tracking
     for (const auto & ego_poly : expanded_ego_polys) {
       if (bg::within(obj_point, ego_poly)) {
         objects.push_back(obj);
         break;
       }
-    }
-
-    // Check if the object is in the predicted path for AEB or not
-    if (!std::any_of(ego_polys.begin(), ego_polys.end(), [&obj_point](const auto & ego_poly) {
-          return bg::within(obj_point, ego_poly);
-        })) {
-      obj.is_target = false;
     }
   }
 }
