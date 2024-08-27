@@ -492,9 +492,10 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
       return std::make_optional<ObjectData>(*closest_object_point_itr);
     });
 
-    const bool has_collision = (closest_object_point.has_value() && closest_object_point.value().is_target)
-             ? hasCollision(current_v, closest_object_point.value())
-             : false;
+    const bool has_collision =
+      (closest_object_point.has_value() && closest_object_point.value().is_target)
+        ? hasCollision(current_v, closest_object_point.value())
+        : false;
 
     // Add debug markers
     if (publish_debug_markers_) {
