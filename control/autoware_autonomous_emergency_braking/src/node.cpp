@@ -471,11 +471,11 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
       return objects;
     });
 
-    // Get only the closest object and calculate its speed
+    // Get only the closest and target object and calculate its speed
     const auto closest_object_point = std::invoke([&]() -> std::optional<ObjectData> {
       const auto closest_object_point_itr =
         std::min_element(objects.begin(), objects.end(), [](const auto & o1, const auto & o2) {
-          return o1.distance_to_object < o2.distance_to_object;
+          return (o1.is_target && (!o2.is_target || o1.distance_to_object < o2.distance_to_object));
         });
 
       if (closest_object_point_itr == objects.end()) {
