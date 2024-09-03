@@ -145,6 +145,8 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   use_object_velocity_calculation_ = declare_parameter<bool>("use_object_velocity_calculation");
   check_autoware_state_ = declare_parameter<bool>("check_autoware_state");
   path_footprint_extra_margin_ = declare_parameter<double>("path_footprint_extra_margin");
+  speed_calculation_expansion_margin_ =
+    declare_parameter<double>("speed_calculation_expansion_margin");
   detection_range_min_height_ = declare_parameter<double>("detection_range_min_height");
   detection_range_max_height_margin_ =
     declare_parameter<double>("detection_range_max_height_margin");
@@ -205,6 +207,8 @@ rcl_interfaces::msg::SetParametersResult AEB::onParameter(
     parameters, "use_object_velocity_calculation", use_object_velocity_calculation_);
   updateParam<bool>(parameters, "check_autoware_state", check_autoware_state_);
   updateParam<double>(parameters, "path_footprint_extra_margin", path_footprint_extra_margin_);
+  updateParam<double>(
+    parameters, "speed_calculation_expansion_margin", speed_calculation_expansion_margin_);
   updateParam<double>(parameters, "detection_range_min_height", detection_range_min_height_);
   updateParam<double>(
     parameters, "detection_range_max_height_margin", detection_range_max_height_margin_);
@@ -451,19 +455,21 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
     // Check which points of the cropped point cloud are on the ego path, and get the closest one
     const auto ego_polys = generatePathFootprint(path, expand_width_);
 
-    // Expanded Ego polygons for obstacle search and tracking
-    std::vector<Polygon2d> expanded_ego_polys;
+    // Expanded Ego polygons for speed calculation
+    std::vector<Polygon2d> speed_calc_expanded_ego_polys;
 
     auto objects = std::invoke([&]() {
       std::vector<ObjectData> objects;
       // Crop out Pointcloud using an extra wide ego path
       if (use_pointcloud_data_) {
-        expanded_ego_polys =
+        const auto expanded_ego_polys =
           generatePathFootprint(path, expand_width_ + path_footprint_extra_margin_);
         cropPointCloudWithEgoFootprintPath(expanded_ego_polys, filtered_objects);
+        speed_calc_expanded_ego_polys =
+          generatePathFootprint(path, expand_width_ + speed_calculation_expansion_margin_);
         const auto current_time = obstacle_ros_pointcloud_ptr_->header.stamp;
         createObjectDataUsingPointCloudClusters(
-          path, ego_polys, expanded_ego_polys, current_time, objects, filtered_objects);
+          path, ego_polys, speed_calc_expanded_ego_polys, current_time, objects, filtered_objects);
       }
       if (use_predicted_object_data_) {
         createObjectDataUsingPredictedObjects(path, ego_polys, objects);
@@ -492,26 +498,26 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
       }
 
       // If no target object is found, find the closest object overall
-      const auto closest_object_itr =
+      const auto closest_object_point_itr =
         std::min_element(objects.begin(), objects.end(), [](const auto & o1, const auto & o2) {
           return o1.distance_to_object < o2.distance_to_object;
         });
 
-      if (closest_object_itr == objects.end()) {
+      if (closest_object_point_itr == objects.end()) {
         return std::nullopt;
       }
 
       const auto closest_object_speed =
         (use_object_velocity_calculation_)
-          ? collision_data_keeper_.calcObjectSpeedFromHistory(*closest_object_itr, path, current_v)
+          ? collision_data_keeper_.calcObjectSpeedFromHistory(*closest_object_point_itr, path, current_v)
           : std::make_optional<double>(0.0);
 
       if (!closest_object_speed.has_value()) {
         return std::nullopt;
       }
 
-      closest_object_itr->velocity = closest_object_speed.value();
-      return std::make_optional<ObjectData>(*closest_object_itr);
+      closest_object_point_itr->velocity = closest_object_speed.value();
+      return std::make_optional<ObjectData>(*closest_object_point_itr);
     });
 
     const bool has_collision =
@@ -523,7 +529,7 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
     if (publish_debug_markers_) {
       const auto [color_r, color_g, color_b, color_a] = debug_colors;
       addMarker(
-        this->get_clock()->now(), path, ego_polys, expanded_ego_polys, objects,
+        this->get_clock()->now(), path, ego_polys, speed_calc_expanded_ego_polys, objects,
         closest_object_point, color_r, color_g, color_b, color_a, debug_ns, debug_markers);
     }
     // check collision using rss distance

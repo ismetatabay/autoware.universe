@@ -527,6 +527,7 @@ public:
   bool use_object_velocity_calculation_;
   bool check_autoware_state_;
   double path_footprint_extra_margin_;
+  double speed_calculation_expansion_margin_;
   double detection_range_min_height_;
   double detection_range_max_height_margin_;
   double voxel_grid_x_;
