@@ -507,10 +507,10 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
         return std::nullopt;
       }
 
-      const auto closest_object_speed =
-        (use_object_velocity_calculation_)
-          ? collision_data_keeper_.calcObjectSpeedFromHistory(*closest_object_point_itr, path, current_v)
-          : std::make_optional<double>(0.0);
+      const auto closest_object_speed = (use_object_velocity_calculation_)
+                                          ? collision_data_keeper_.calcObjectSpeedFromHistory(
+                                              *closest_object_point_itr, path, current_v)
+                                          : std::make_optional<double>(0.0);
 
       if (!closest_object_speed.has_value()) {
         return std::nullopt;
